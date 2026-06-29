@@ -1,0 +1,1599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Digital Study Assistant</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+/* ───────────────────────────────────────────
+   RESET & ROOT VARIABLES
+─────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:         #0c0c10;
+  --surface:    #13131a;
+  --card:       #1a1a24;
+  --card2:      #1f1f2e;
+  --border:     #2a2a3a;
+  --border2:    #353550;
+  --gold:       #e8a020;
+  --gold-dim:   #c4841a;
+  --gold-glow:  rgba(232,160,32,0.15);
+  --teal:       #2dd4bf;
+  --teal-glow:  rgba(45,212,191,0.12);
+  --rose:       #f43f5e;
+  --rose-glow:  rgba(244,63,94,0.12);
+  --green:      #34d399;
+  --green-glow: rgba(52,211,153,0.12);
+  --text:       #e8e3da;
+  --text-dim:   #6b6b80;
+  --text-mid:   #9999aa;
+  --white:      #ffffff;
+  --font-serif: 'DM Serif Display', Georgia, serif;
+  --font-mono:  'JetBrains Mono', 'Courier New', monospace;
+  --radius:     12px;
+  --radius-sm:  8px;
+  --shadow:     0 8px 32px rgba(0,0,0,0.5);
+  --shadow-sm:  0 4px 16px rgba(0,0,0,0.3);
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font-mono);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* grain overlay */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.4;
+}
+
+/* ───────────────────────────────────────────
+   SCROLLBAR
+─────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--surface); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--gold-dim); }
+
+/* ───────────────────────────────────────────
+   LAYOUT
+─────────────────────────────────────────── */
+.app-wrapper {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-height: 100vh;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* ───────────────────────────────────────────
+   HEADER
+─────────────────────────────────────────── */
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 28px 0 20px;
+  border-bottom: 1px solid var(--border);
+  animation: fadeDown 0.6s ease;
+}
+
+.header-left { display: flex; align-items: center; gap: 16px; }
+
+.header-logo {
+  width: 42px; height: 42px;
+  background: linear-gradient(135deg, var(--gold), var(--gold-dim));
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+  box-shadow: 0 0 20px var(--gold-glow);
+}
+
+.header-title h1 {
+  font-family: var(--font-serif);
+  font-size: 22px;
+  color: var(--white);
+  letter-spacing: 0.02em;
+}
+.header-title p {
+  font-size: 10px;
+  color: var(--text-dim);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-top: 1px;
+}
+
+.header-right { display: flex; align-items: center; gap: 24px; }
+
+#live-clock {
+  font-size: 11px;
+  color: var(--text-dim);
+  letter-spacing: 0.06em;
+}
+
+.header-dot {
+  width: 8px; height: 8px;
+  background: var(--green);
+  border-radius: 50%;
+  box-shadow: 0 0 8px var(--green);
+  animation: pulse 2s infinite;
+}
+
+/* ───────────────────────────────────────────
+   NAVIGATION TABS
+─────────────────────────────────────────── */
+nav {
+  display: flex;
+  gap: 4px;
+  padding: 20px 0 0;
+  border-bottom: 1px solid var(--border);
+  animation: fadeDown 0.7s ease;
+}
+
+.tab-btn {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 10px 18px;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  position: relative;
+  transition: color 0.2s, background 0.2s;
+}
+.tab-btn:hover { color: var(--text); background: var(--surface); }
+.tab-btn.active {
+  color: var(--gold);
+  background: var(--surface);
+}
+.tab-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px; left: 0; right: 0;
+  height: 2px;
+  background: var(--gold);
+  box-shadow: 0 0 8px var(--gold);
+}
+
+/* ───────────────────────────────────────────
+   TAB PANELS
+─────────────────────────────────────────── */
+.tab-panel {
+  display: none;
+  padding: 32px 0 48px;
+  animation: fadeUp 0.35s ease;
+}
+.tab-panel.active { display: block; }
+
+/* ───────────────────────────────────────────
+   SHARED CARD & FORM COMPONENTS
+─────────────────────────────────────────── */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin-bottom: 18px;
+}
+.card-sm { padding: 16px 20px; }
+
+.section-title {
+  font-family: var(--font-serif);
+  font-size: 20px;
+  color: var(--white);
+  margin-bottom: 4px;
+}
+.section-sub {
+  font-size: 10px;
+  color: var(--text-dim);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+}
+
+label {
+  display: block;
+  font-size: 10px;
+  color: var(--text-dim);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+input[type="text"], input[type="number"], select, textarea {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  padding: 10px 14px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+input:focus, select:focus, textarea:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px var(--gold-glow);
+}
+
+select option { background: var(--card); }
+textarea { resize: vertical; min-height: 120px; }
+
+.input-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+}
+.input-row .field { flex: 1; }
+
+.btn {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 11px 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.btn-gold {
+  background: var(--gold);
+  color: #0c0c10;
+  box-shadow: 0 4px 16px var(--gold-glow);
+}
+.btn-gold:hover { background: #f5b030; transform: translateY(-1px); box-shadow: 0 6px 24px var(--gold-glow); }
+
+.btn-ghost {
+  background: var(--surface);
+  color: var(--text-mid);
+  border: 1px solid var(--border);
+}
+.btn-ghost:hover { border-color: var(--border2); color: var(--text); }
+
+.btn-danger {
+  background: var(--rose-glow);
+  color: var(--rose);
+  border: 1px solid rgba(244,63,94,0.2);
+}
+.btn-danger:hover { background: rgba(244,63,94,0.2); }
+
+.btn-teal {
+  background: var(--teal-glow);
+  color: var(--teal);
+  border: 1px solid rgba(45,212,191,0.2);
+}
+.btn-teal:hover { background: rgba(45,212,191,0.2); }
+
+.btn-green {
+  background: var(--green-glow);
+  color: var(--green);
+  border: 1px solid rgba(52,211,153,0.2);
+}
+.btn-green:hover { background: rgba(52,211,153,0.2); }
+
+.badge {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+.divider {
+  height: 1px;
+  background: var(--border);
+  margin: 16px 0;
+}
+
+/* empty state */
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-dim);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+}
+.empty-state .empty-icon { font-size: 32px; margin-bottom: 12px; }
+
+/* ───────────────────────────────────────────
+   TAB 1 — TASK MANAGER
+─────────────────────────────────────────── */
+.stats-bar {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 20px;
+}
+.stat-block { text-align: center; }
+.stat-block .num {
+  font-family: var(--font-serif);
+  font-size: 28px;
+  color: var(--white);
+  line-height: 1;
+}
+.stat-block .lbl {
+  font-size: 9px;
+  color: var(--text-dim);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+
+.progress-bar-wrap {
+  background: var(--surface);
+  border-radius: 4px;
+  height: 6px;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--gold), #f5b030);
+  border-radius: 4px;
+  transition: width 0.5s ease;
+  box-shadow: 0 0 8px var(--gold-glow);
+}
+
+.filter-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+.filter-btn {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-dim);
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.filter-btn:hover { color: var(--text); }
+.filter-btn.active { background: var(--gold-glow); border-color: var(--gold); color: var(--gold); }
+
+.task-list { display: flex; flex-direction: column; gap: 8px; }
+
+.task-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
+  transition: all 0.2s;
+  animation: slideIn 0.25s ease;
+}
+.task-item:hover { border-color: var(--border2); transform: translateX(2px); }
+.task-item.done { opacity: 0.5; }
+
+.task-check {
+  width: 20px; height: 20px;
+  border: 2px solid var(--border2);
+  border-radius: 6px;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
+  background: transparent;
+}
+.task-check:hover { border-color: var(--gold); }
+.task-check.checked {
+  background: var(--gold);
+  border-color: var(--gold);
+  box-shadow: 0 0 8px var(--gold-glow);
+}
+.task-check.checked::after { content: '✓'; font-size: 11px; color: #0c0c10; font-weight: 700; }
+
+.task-title {
+  flex: 1;
+  font-size: 13px;
+  color: var(--text);
+  transition: all 0.2s;
+}
+.task-item.done .task-title {
+  text-decoration: line-through;
+  color: var(--text-dim);
+}
+
+.task-date { font-size: 10px; color: var(--text-dim); }
+
+.task-del {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+.task-del:hover { color: var(--rose); background: var(--rose-glow); }
+
+/* ───────────────────────────────────────────
+   TAB 2 — POMODORO TIMER
+─────────────────────────────────────────── */
+.timer-layout {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 18px;
+  align-items: start;
+}
+
+.timer-ring-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px 0;
+}
+
+.ring-container {
+  position: relative;
+  width: 220px; height: 220px;
+  margin-bottom: 28px;
+}
+
+.ring-svg { transform: rotate(-90deg); }
+
+.ring-bg { fill: none; stroke: var(--border); stroke-width: 10; }
+.ring-progress {
+  fill: none;
+  stroke: var(--gold);
+  stroke-width: 10;
+  stroke-linecap: round;
+  stroke-dasharray: 628;
+  stroke-dashoffset: 0;
+  filter: drop-shadow(0 0 8px var(--gold));
+  transition: stroke-dashoffset 0.5s linear, stroke 0.5s;
+}
+
+.ring-inner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.ring-time {
+  font-family: var(--font-serif);
+  font-size: 44px;
+  color: var(--white);
+  line-height: 1;
+}
+.ring-mode {
+  font-size: 9px;
+  color: var(--text-dim);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-top: 6px;
+}
+
+.timer-controls {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.session-dots {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+.session-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--border2);
+  transition: all 0.3s;
+}
+.session-dot.filled {
+  background: var(--gold);
+  box-shadow: 0 0 6px var(--gold);
+}
+
+.timer-sidebar { display: flex; flex-direction: column; gap: 14px; }
+
+.mode-card {
+  padding: 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.mode-card:hover { border-color: var(--border2); }
+.mode-card.active-mode { border-color: var(--gold); background: var(--gold-glow); }
+.mode-card .mc-title { font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+.mode-card .mc-sub { font-size: 10px; color: var(--text-dim); }
+
+.tip-list { display: flex; flex-direction: column; gap: 10px; }
+.tip-item { display: flex; gap: 10px; align-items: flex-start; }
+.tip-num {
+  width: 22px; height: 22px;
+  background: var(--gold-glow);
+  border: 1px solid rgba(232,160,32,0.3);
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--gold);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.tip-text { font-size: 11px; color: var(--text-dim); line-height: 1.6; }
+
+/* ───────────────────────────────────────────
+   TAB 3 — GPA CALCULATOR
+─────────────────────────────────────────── */
+.gpa-layout {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 18px;
+  align-items: start;
+}
+
+.gpa-display-card {
+  background: linear-gradient(135deg, var(--card), var(--card2));
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 28px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.gpa-display-card::before {
+  content: '';
+  position: absolute;
+  top: -40px; right: -40px;
+  width: 120px; height: 120px;
+  background: var(--gold-glow);
+  border-radius: 50%;
+  filter: blur(40px);
+}
+
+.gpa-number {
+  font-family: var(--font-serif);
+  font-size: 72px;
+  color: var(--gold);
+  line-height: 1;
+  text-shadow: 0 0 40px var(--gold-glow);
+  position: relative;
+}
+.gpa-label {
+  font-size: 10px;
+  color: var(--text-dim);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-top: 6px;
+}
+.gpa-class {
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--teal);
+  font-weight: 600;
+}
+
+.grade-table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+.grade-table th {
+  font-size: 9px;
+  color: var(--text-dim);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  font-weight: 600;
+}
+.grade-table td {
+  font-size: 12px;
+  color: var(--text);
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.grade-table tr:last-child td { border-bottom: none; }
+.grade-table tbody tr:hover td { background: var(--surface); }
+
+.grade-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* ───────────────────────────────────────────
+   TAB 4 — NOTES MANAGER
+─────────────────────────────────────────── */
+.notes-layout {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 18px;
+  align-items: start;
+}
+
+.notes-list { display: flex; flex-direction: column; gap: 6px; }
+
+.note-list-item {
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s;
+  animation: slideIn 0.25s ease;
+}
+.note-list-item:hover { border-color: var(--border2); }
+.note-list-item.active { border-color: var(--gold); background: var(--gold-glow); }
+.note-list-item .nli-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.note-list-item .nli-date { font-size: 9px; color: var(--text-dim); margin-top: 3px; }
+
+.notes-editor { display: flex; flex-direction: column; gap: 14px; }
+
+.editor-actions { display: flex; gap: 8px; align-items: center; }
+.editor-ts { font-size: 10px; color: var(--text-dim); margin-left: auto; }
+
+/* ───────────────────────────────────────────
+   TAB 5 — MOTIVATIONAL QUOTES
+─────────────────────────────────────────── */
+.quote-hero {
+  background: linear-gradient(135deg, var(--card), var(--card2));
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 48px 40px;
+  position: relative;
+  overflow: hidden;
+  text-align: center;
+  margin-bottom: 18px;
+}
+.quote-hero::before {
+  content: '';
+  position: absolute;
+  top: -60px; left: -60px;
+  width: 200px; height: 200px;
+  background: radial-gradient(circle, var(--gold-glow), transparent 70%);
+}
+.quote-hero::after {
+  content: '';
+  position: absolute;
+  bottom: -60px; right: -60px;
+  width: 200px; height: 200px;
+  background: radial-gradient(circle, var(--teal-glow), transparent 70%);
+}
+
+.quote-mark {
+  font-family: var(--font-serif);
+  font-size: 80px;
+  line-height: 0.5;
+  color: var(--gold);
+  opacity: 0.3;
+  display: block;
+  margin-bottom: 16px;
+  position: relative;
+}
+
+.quote-text {
+  font-family: var(--font-serif);
+  font-size: clamp(18px, 3vw, 24px);
+  font-style: italic;
+  color: var(--white);
+  line-height: 1.6;
+  position: relative;
+  max-width: 680px;
+  margin: 0 auto 20px;
+}
+
+.quote-author {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gold);
+  letter-spacing: 0.08em;
+  position: relative;
+}
+
+.quote-controls {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 28px;
+  position: relative;
+}
+
+.quote-counter {
+  font-size: 10px;
+  color: var(--text-dim);
+  margin-top: 16px;
+  text-align: center;
+  letter-spacing: 0.1em;
+}
+
+.quotes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 12px;
+}
+.quote-card-sm {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+  transition: all 0.2s;
+}
+.quote-card-sm:hover { border-color: var(--gold); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+.quote-card-sm .qcs-text { font-size: 12px; color: var(--text-mid); line-height: 1.6; margin-bottom: 8px; font-style: italic; }
+.quote-card-sm .qcs-author { font-size: 10px; color: var(--gold); font-weight: 600; letter-spacing: 0.06em; }
+
+/* ───────────────────────────────────────────
+   ANIMATIONS
+─────────────────────────────────────────── */
+@keyframes fadeDown {
+  from { opacity: 0; transform: translateY(-12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+@keyframes quoteSwap {
+  0%   { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.quote-animate { animation: quoteSwap 0.4s ease; }
+
+/* ───────────────────────────────────────────
+   TOAST NOTIFICATION
+─────────────────────────────────────────── */
+#toast {
+  position: fixed;
+  bottom: 30px; right: 30px;
+  background: var(--card2);
+  border: 1px solid var(--border2);
+  border-left: 3px solid var(--gold);
+  border-radius: var(--radius-sm);
+  padding: 12px 20px;
+  font-size: 12px;
+  color: var(--text);
+  box-shadow: var(--shadow);
+  z-index: 10000;
+  opacity: 0;
+  transform: translateX(20px);
+  transition: all 0.3s ease;
+  pointer-events: none;
+}
+#toast.show { opacity: 1; transform: translateX(0); }
+
+/* ───────────────────────────────────────────
+   RESPONSIVE
+─────────────────────────────────────────── */
+@media (max-width: 720px) {
+  .timer-layout, .gpa-layout, .notes-layout { grid-template-columns: 1fr; }
+  nav { overflow-x: auto; }
+}
+</style>
+</head>
+<body>
+
+<div class="app-wrapper">
+
+  <!-- ── HEADER ───────────────────────────── -->
+  <header>
+    <div class="header-left">
+      <div class="header-logo">📚</div>
+      <div class="header-title">
+        <h1>Digital Study Assistant</h1>
+        <p>Your personal academic companion</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <span id="live-clock">Loading...</span>
+      <div class="header-dot"></div>
+    </div>
+  </header>
+
+  <!-- ── NAV TABS ─────────────────────────── -->
+  <div>
+    <nav>
+      <button class="tab-btn active" onclick="switchTab('tasks', this)">📋 Tasks</button>
+      <button class="tab-btn" onclick="switchTab('timer', this)">⏱ Timer</button>
+      <button class="tab-btn" onclick="switchTab('gpa', this)">🎓 GPA</button>
+      <button class="tab-btn" onclick="switchTab('notes', this)">📓 Notes</button>
+      <button class="tab-btn" onclick="switchTab('quotes', this)">✨ Quotes</button>
+    </nav>
+
+    <!-- ══════════════════════════════════════
+         TAB 1 — TASK MANAGER
+    ═══════════════════════════════════════ -->
+    <div class="tab-panel active" id="tab-tasks">
+
+      <!-- stats -->
+      <div class="card">
+        <div class="stats-bar">
+          <div class="stat-block">
+            <div class="num" id="stat-total">0</div>
+            <div class="lbl">Total</div>
+          </div>
+          <div class="stat-block">
+            <div class="num" id="stat-done" style="color:var(--green)">0</div>
+            <div class="lbl">Done</div>
+          </div>
+          <div class="stat-block">
+            <div class="num" id="stat-pending" style="color:var(--gold)">0</div>
+            <div class="lbl">Pending</div>
+          </div>
+        </div>
+        <div class="progress-bar-wrap">
+          <div class="progress-bar-fill" id="task-progress" style="width:0%"></div>
+        </div>
+
+        <!-- add task -->
+        <div class="input-row">
+          <div class="field">
+            <label>New Task</label>
+            <input type="text" id="task-input" placeholder="e.g. Read Chapter 5 of Physics..." onkeydown="if(event.key==='Enter')addTask()"/>
+          </div>
+          <button class="btn btn-gold" onclick="addTask()">+ Add Task</button>
+        </div>
+      </div>
+
+      <!-- filter -->
+      <div class="filter-tabs">
+        <button class="filter-btn active" onclick="setFilter('all',this)">All</button>
+        <button class="filter-btn" onclick="setFilter('pending',this)">Pending</button>
+        <button class="filter-btn" onclick="setFilter('done',this)">Done</button>
+      </div>
+
+      <!-- list -->
+      <div class="task-list" id="task-list"></div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+         TAB 2 — POMODORO TIMER
+    ═══════════════════════════════════════ -->
+    <div class="tab-panel" id="tab-timer">
+      <div class="timer-layout">
+
+        <div class="card" style="text-align:center">
+          <p class="section-sub" style="text-align:left">Pomodoro Technique</p>
+          <div class="section-title" style="text-align:left; margin-bottom:24px">Focus Timer</div>
+
+          <div class="timer-ring-wrap">
+            <div class="ring-container">
+              <svg class="ring-svg" width="220" height="220" viewBox="0 0 220 220">
+                <circle class="ring-bg" cx="110" cy="110" r="100"/>
+                <circle class="ring-progress" id="ring" cx="110" cy="110" r="100"/>
+              </svg>
+              <div class="ring-inner">
+                <div class="ring-time" id="timer-display">25:00</div>
+                <div class="ring-mode" id="timer-mode">Study Session</div>
+              </div>
+            </div>
+
+            <div class="timer-controls">
+              <button class="btn btn-green" id="start-btn" onclick="timerStart()">▶ Start</button>
+              <button class="btn btn-ghost" onclick="timerPause()">⏸ Pause</button>
+              <button class="btn btn-danger" onclick="timerReset()">↺ Reset</button>
+            </div>
+
+            <div style="font-size:11px; color:var(--text-dim); margin-bottom:10px">Sessions Completed</div>
+            <div class="session-dots" id="session-dots">
+              <div class="session-dot"></div>
+              <div class="session-dot"></div>
+              <div class="session-dot"></div>
+              <div class="session-dot"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="timer-sidebar">
+          <div class="card card-sm">
+            <p class="section-sub">Mode</p>
+            <div class="mode-card active-mode" id="mode-study" onclick="switchTimerMode('study')">
+              <div class="mc-title">📚 Study Session</div>
+              <div class="mc-sub">25 minutes of focused work</div>
+            </div>
+            <div style="height:8px"></div>
+            <div class="mode-card" id="mode-break" onclick="switchTimerMode('break')">
+              <div class="mc-title">☕ Short Break</div>
+              <div class="mc-sub">5 minutes to recharge</div>
+            </div>
+          </div>
+
+          <div class="card card-sm">
+            <p class="section-sub">How It Works</p>
+            <div class="tip-list">
+              <div class="tip-item">
+                <div class="tip-num">1</div>
+                <div class="tip-text">Work for 25 minutes, fully focused — no distractions.</div>
+              </div>
+              <div class="tip-item">
+                <div class="tip-num">2</div>
+                <div class="tip-text">Take a 5-minute break when the timer goes off.</div>
+              </div>
+              <div class="tip-item">
+                <div class="tip-num">3</div>
+                <div class="tip-text">After 4 sessions, take a longer 20-30 min rest.</div>
+              </div>
+              <div class="tip-item">
+                <div class="tip-num">4</div>
+                <div class="tip-text">Track completed sessions with the dots below.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+         TAB 3 — GPA CALCULATOR
+    ═══════════════════════════════════════ -->
+    <div class="tab-panel" id="tab-gpa">
+      <div class="gpa-layout">
+
+        <!-- left: form + table -->
+        <div>
+          <div class="card">
+            <p class="section-sub">Add Course</p>
+            <div class="input-row" style="flex-wrap:wrap; gap:12px">
+              <div class="field" style="min-width:140px">
+                <label>Course Name</label>
+                <input type="text" id="gpa-course" placeholder="e.g. Calculus II"/>
+              </div>
+              <div class="field" style="max-width:120px">
+                <label>Grade</label>
+                <select id="gpa-grade">
+                  <option>A+</option><option selected>A</option><option>A-</option>
+                  <option>B+</option><option>B</option><option>B-</option>
+                  <option>C+</option><option>C</option><option>C-</option>
+                  <option>D+</option><option>D</option><option>D-</option>
+                  <option>F</option>
+                </select>
+              </div>
+              <div class="field" style="max-width:100px">
+                <label>Credit Hours</label>
+                <input type="number" id="gpa-credits" value="3" min="1" max="6"/>
+              </div>
+              <div style="align-self:flex-end">
+                <button class="btn btn-gold" onclick="addGrade()">+ Add</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px">
+              <p class="section-sub" style="margin-bottom:0">Course List</p>
+              <button class="btn btn-danger" style="font-size:10px; padding:6px 12px" onclick="clearGrades()">🗑 Clear All</button>
+            </div>
+            <div id="grade-table-wrap">
+              <table class="grade-table">
+                <thead>
+                  <tr>
+                    <th>Course</th>
+                    <th>Grade</th>
+                    <th>Points</th>
+                    <th>Credits</th>
+                    <th>Weighted</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="grade-tbody"></tbody>
+              </table>
+              <div class="empty-state" id="grade-empty" style="display:none">
+                <div class="empty-icon">🎓</div>
+                No courses added yet
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- right: GPA card -->
+        <div>
+          <div class="gpa-display-card">
+            <div class="gpa-label">Cumulative GPA</div>
+            <div class="gpa-number" id="gpa-display">—</div>
+            <div class="gpa-class" id="gpa-class">Add courses to begin</div>
+
+            <div class="divider" style="margin:20px 0"></div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; text-align:left">
+              <div>
+                <div style="font-size:10px; color:var(--text-dim); letter-spacing:0.1em; text-transform:uppercase">Total Credits</div>
+                <div style="font-size:20px; font-family:var(--font-serif); color:var(--white); margin-top:4px" id="gpa-credits-total">0</div>
+              </div>
+              <div>
+                <div style="font-size:10px; color:var(--text-dim); letter-spacing:0.1em; text-transform:uppercase">Courses</div>
+                <div style="font-size:20px; font-family:var(--font-serif); color:var(--white); margin-top:4px" id="gpa-courses-count">0</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- grade scale reference -->
+          <div class="card card-sm">
+            <p class="section-sub">Grade Scale</p>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px 16px; font-size:11px">
+              <div style="display:flex; justify-content:space-between; color:var(--text-dim)"><span>A+ / A</span><span style="color:var(--green)">4.0</span></div>
+              <div style="display:flex; justify-content:space-between; color:var(--text-dim)"><span>A-</span><span style="color:var(--green)">3.7</span></div>
+              <div style="display:flex; justify-content:space-between; color:var(--text-dim)"><span>B+</span><span style="color:var(--teal)">3.3</span></div>
+              <div style="display:flex; justify-content:space-between; color:var(--text-dim)"><span>B</span><span style="color:var(--teal)">3.0</span></div>
+              <div style="display:flex; justify-content:space-between; color:var(--text-dim)"><span>B-</span><span style="color:var(--teal)">2.7</span></div>
+              <div style="display:flex; justify-content:space-between; color:var(--text-dim)"><span>C+</span><span style="color:var(--gold)">2.3</span></div>
+              <div style="display:flex; justify-content:space-between; color:var(--text-dim)"><span>C</span><span style="color:var(--gold)">2.0</span></div>
+              <div style="display:flex; justify-content:space-between; color:var(--text-dim)"><span>D</span><span style="color:var(--rose)">1.0</span></div>
+              <div style="display:flex; justify-content:space-between; color:var(--text-dim)"><span>F</span><span style="color:var(--rose)">0.0</span></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+         TAB 4 — NOTES MANAGER
+    ═══════════════════════════════════════ -->
+    <div class="tab-panel" id="tab-notes">
+      <div class="notes-layout">
+
+        <!-- sidebar -->
+        <div>
+          <div class="card card-sm" style="margin-bottom:12px">
+            <button class="btn btn-gold" style="width:100%" onclick="newNote()">+ New Note</button>
+          </div>
+          <div class="notes-list" id="notes-list"></div>
+          <div class="empty-state" id="notes-sidebar-empty" style="display:none">
+            <div class="empty-icon">📓</div>
+            No notes yet
+          </div>
+        </div>
+
+        <!-- editor -->
+        <div class="card notes-editor">
+          <div>
+            <label>Note Title</label>
+            <input type="text" id="note-title" placeholder="Untitled Note"/>
+          </div>
+          <div>
+            <label>Content</label>
+            <textarea id="note-content" style="min-height:280px" placeholder="Start typing your notes here...&#10;&#10;• Key concepts&#10;• Formulas&#10;• Important dates"></textarea>
+          </div>
+          <div class="editor-actions">
+            <button class="btn btn-gold" onclick="saveNote()">💾 Save Note</button>
+            <button class="btn btn-danger" onclick="deleteNote()">🗑 Delete</button>
+            <span class="editor-ts" id="note-ts"></span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+         TAB 5 — MOTIVATIONAL QUOTES
+    ═══════════════════════════════════════ -->
+    <div class="tab-panel" id="tab-quotes">
+
+      <div class="quote-hero">
+        <span class="quote-mark">"</span>
+        <div class="quote-text" id="quote-text">Loading quote...</div>
+        <div class="quote-author" id="quote-author">— Author</div>
+        <div class="quote-controls">
+          <button class="btn btn-ghost" onclick="prevQuote()">◀ Prev</button>
+          <button class="btn btn-gold" onclick="randomQuote()">⟳ Random</button>
+          <button class="btn btn-ghost" onclick="nextQuote()">Next ▶</button>
+        </div>
+      </div>
+      <div class="quote-counter" id="quote-counter"></div>
+
+      <div class="divider" style="margin:24px 0 20px"></div>
+      <p class="section-sub">All Quotes</p>
+      <div class="quotes-grid" id="quotes-grid"></div>
+    </div>
+
+  </div><!-- end tab panels -->
+</div><!-- end app-wrapper -->
+
+<div id="toast"></div>
+
+<script>
+/* ═══════════════════════════════════════════════════
+   UTILITIES
+═══════════════════════════════════════════════════ */
+const $ = id => document.getElementById(id);
+const load = k => JSON.parse(localStorage.getItem(k) || 'null');
+const save = (k,v) => localStorage.setItem(k, JSON.stringify(v));
+
+function toast(msg, color='var(--gold)') {
+  const t = $('toast');
+  t.textContent = msg;
+  t.style.borderLeftColor = color;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+function fmtDate(d) {
+  return new Date(d).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+}
+
+/* ── Live Clock ─────────────────────────────── */
+function updateClock() {
+  const now = new Date();
+  $('live-clock').textContent = now.toLocaleDateString('en-US',
+    {weekday:'short', month:'short', day:'numeric'}) + '  ·  ' +
+    now.toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+/* ── Tab Switching ──────────────────────────── */
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  $('tab-' + name).classList.add('active');
+  btn.classList.add('active');
+}
+
+/* ═══════════════════════════════════════════════════
+   TAB 1 — TASK MANAGER
+═══════════════════════════════════════════════════ */
+let tasks = load('dsa-tasks') || [];
+let taskFilter = 'all';
+
+function addTask() {
+  const val = $('task-input').value.trim();
+  if (!val) { toast('Please enter a task title.', 'var(--rose)'); return; }
+  tasks.push({ id: Date.now(), title: val, done: false, created: Date.now() });
+  save('dsa-tasks', tasks);
+  $('task-input').value = '';
+  renderTasks();
+  toast('Task added!');
+}
+
+function toggleTask(id) {
+  const t = tasks.find(t => t.id === id);
+  if (t) { t.done = !t.done; save('dsa-tasks', tasks); renderTasks(); }
+}
+
+function deleteTask(id) {
+  tasks = tasks.filter(t => t.id !== id);
+  save('dsa-tasks', tasks);
+  renderTasks();
+  toast('Task removed.', 'var(--rose)');
+}
+
+function setFilter(f, btn) {
+  taskFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTasks();
+}
+
+function renderTasks() {
+  const total   = tasks.length;
+  const done    = tasks.filter(t => t.done).length;
+  const pending = total - done;
+
+  $('stat-total').textContent   = total;
+  $('stat-done').textContent    = done;
+  $('stat-pending').textContent = pending;
+  $('task-progress').style.width = total ? (done/total*100)+'%' : '0%';
+
+  const list = $('task-list');
+  list.innerHTML = '';
+  const filtered = tasks.filter(t =>
+    taskFilter === 'all' ? true :
+    taskFilter === 'done' ? t.done : !t.done
+  );
+
+  if (!filtered.length) {
+    list.innerHTML = `<div class="empty-state"><div class="empty-icon">✅</div>${
+      taskFilter === 'done' ? 'No completed tasks yet.' :
+      taskFilter === 'pending' ? 'No pending tasks — great work!' :
+      'No tasks yet. Add one above!'}</div>`;
+    return;
+  }
+
+  filtered.forEach(t => {
+    const el = document.createElement('div');
+    el.className = 'task-item' + (t.done ? ' done' : '');
+    el.innerHTML = `
+      <div class="task-check ${t.done?'checked':''}" onclick="toggleTask(${t.id})"></div>
+      <div class="task-title">${escHtml(t.title)}</div>
+      <div class="task-date">${fmtDate(t.created)}</div>
+      <button class="task-del" onclick="deleteTask(${t.id})">✕</button>
+    `;
+    list.appendChild(el);
+  });
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+renderTasks();
+
+/* ═══════════════════════════════════════════════════
+   TAB 2 — POMODORO TIMER
+═══════════════════════════════════════════════════ */
+const STUDY_SEC = 25 * 60;
+const BREAK_SEC =  5 * 60;
+const CIRC = 628;  // 2π × 100
+
+let timerRemaining = STUDY_SEC;
+let timerTotal     = STUDY_SEC;
+let timerRunning   = false;
+let timerInterval  = null;
+let onBreak        = false;
+let sessions       = 0;
+
+function timerStart() {
+  if (timerRunning) return;
+  timerRunning = true;
+  $('start-btn').disabled = true;
+  timerInterval = setInterval(timerTick, 1000);
+}
+
+function timerPause() {
+  timerRunning = false;
+  $('start-btn').disabled = false;
+  clearInterval(timerInterval);
+}
+
+function timerReset() {
+  timerPause();
+  onBreak = false;
+  timerRemaining = STUDY_SEC;
+  timerTotal     = STUDY_SEC;
+  updateTimerUI();
+  setTimerMode('study');
+}
+
+function timerTick() {
+  if (timerRemaining <= 0) {
+    timerPause();
+    timerTimeUp();
+    return;
+  }
+  timerRemaining--;
+  updateTimerUI();
+}
+
+function timerTimeUp() {
+  if (!onBreak) {
+    sessions = Math.min(sessions + 1, 4);
+    renderSessionDots();
+    if (sessions === 4) {
+      alert('🎉 4 Sessions complete! Take a longer 20-30 min break!');
+      sessions = 0; renderSessionDots();
+    } else {
+      alert('⏱ Session done! Time for a 5-minute break.');
+    }
+    switchTimerMode('break');
+  } else {
+    alert('☕ Break over! Back to studying.');
+    switchTimerMode('study');
+  }
+}
+
+function switchTimerMode(mode) {
+  timerPause();
+  onBreak = mode === 'break';
+  timerTotal = onBreak ? BREAK_SEC : STUDY_SEC;
+  timerRemaining = timerTotal;
+  setTimerMode(mode);
+  updateTimerUI();
+}
+
+function setTimerMode(mode) {
+  const ring = $('ring');
+  $('mode-study').classList.toggle('active-mode', mode === 'study');
+  $('mode-break').classList.toggle('active-mode', mode === 'break');
+  $('timer-mode').textContent = mode === 'study' ? 'Study Session' : 'Break Time ☕';
+  if (mode === 'break') {
+    ring.style.stroke = 'var(--teal)';
+    ring.style.filter = 'drop-shadow(0 0 8px var(--teal))';
+  } else {
+    ring.style.stroke = 'var(--gold)';
+    ring.style.filter = 'drop-shadow(0 0 8px var(--gold))';
+  }
+}
+
+function updateTimerUI() {
+  const m = Math.floor(timerRemaining / 60);
+  const s = timerRemaining % 60;
+  $('timer-display').textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  const pct = 1 - (timerRemaining / timerTotal);
+  $('ring').style.strokeDashoffset = CIRC * (1 - pct);
+}
+
+function renderSessionDots() {
+  document.querySelectorAll('.session-dot').forEach((d,i) => {
+    d.classList.toggle('filled', i < sessions);
+  });
+}
+
+updateTimerUI();
+
+/* ═══════════════════════════════════════════════════
+   TAB 3 — GPA CALCULATOR
+═══════════════════════════════════════════════════ */
+const GP = {
+  'A+':4.0,'A':4.0,'A-':3.7,
+  'B+':3.3,'B':3.0,'B-':2.7,
+  'C+':2.3,'C':2.0,'C-':1.7,
+  'D+':1.3,'D':1.0,'D-':0.7,
+  'F':0.0
+};
+
+let grades = load('dsa-grades') || [];
+
+function addGrade() {
+  const course  = $('gpa-course').value.trim();
+  const grade   = $('gpa-grade').value;
+  const credits = parseFloat($('gpa-credits').value);
+
+  if (!course)           { toast('Enter a course name.', 'var(--rose)'); return; }
+  if (isNaN(credits) || credits < 1) { toast('Enter valid credit hours.', 'var(--rose)'); return; }
+
+  grades.push({ id: Date.now(), course, grade, credits });
+  save('dsa-grades', grades);
+  $('gpa-course').value = '';
+  renderGrades();
+  toast('Course added!');
+}
+
+function deleteGrade(id) {
+  grades = grades.filter(g => g.id !== id);
+  save('dsa-grades', grades);
+  renderGrades();
+}
+
+function clearGrades() {
+  if (!grades.length) return;
+  if (confirm('Clear all grade entries?')) {
+    grades = [];
+    save('dsa-grades', grades);
+    renderGrades();
+    toast('Grades cleared.', 'var(--rose)');
+  }
+}
+
+function gradeColor(g) {
+  const p = GP[g] || 0;
+  if (p >= 3.7) return 'var(--green)';
+  if (p >= 3.0) return 'var(--teal)';
+  if (p >= 2.0) return 'var(--gold)';
+  return 'var(--rose)';
+}
+
+function gpaClass(gpa) {
+  if (gpa >= 3.7) return '🌟 Distinction / Dean\'s List';
+  if (gpa >= 3.3) return '✨ Very Good';
+  if (gpa >= 3.0) return '👍 Good Standing';
+  if (gpa >= 2.7) return '📈 Above Average';
+  if (gpa >= 2.0) return '📊 Satisfactory';
+  if (gpa >= 1.0) return '⚠️ Below Average';
+  return '❌ Academic Warning';
+}
+
+function renderGrades() {
+  const tbody = $('grade-tbody');
+  const empty = $('grade-empty');
+  tbody.innerHTML = '';
+
+  if (!grades.length) {
+    empty.style.display = 'block';
+    $('gpa-display').textContent = '—';
+    $('gpa-class').textContent = 'Add courses to begin';
+    $('gpa-credits-total').textContent = '0';
+    $('gpa-courses-count').textContent = '0';
+    return;
+  }
+  empty.style.display = 'none';
+
+  let totalW = 0, totalC = 0;
+  grades.forEach(g => {
+    const pts = GP[g.grade] || 0;
+    totalW += pts * g.credits;
+    totalC += g.credits;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${escHtml(g.course)}</td>
+      <td><span class="grade-badge" style="background:${gradeColor(g.grade)}22;color:${gradeColor(g.grade)}">${g.grade}</span></td>
+      <td style="color:${gradeColor(g.grade)}">${pts.toFixed(1)}</td>
+      <td>${g.credits}</td>
+      <td>${(pts*g.credits).toFixed(2)}</td>
+      <td><button onclick="deleteGrade(${g.id})" style="background:none;border:none;color:var(--rose);cursor:pointer;font-size:14px">✕</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  const gpa = totalC ? (totalW / totalC) : 0;
+  $('gpa-display').textContent = gpa.toFixed(2);
+  $('gpa-display').style.color = gpa >= 3.0 ? 'var(--green)' : gpa >= 2.0 ? 'var(--gold)' : 'var(--rose)';
+  $('gpa-class').textContent = gpaClass(gpa);
+  $('gpa-credits-total').textContent = totalC;
+  $('gpa-courses-count').textContent = grades.length;
+}
+
+renderGrades();
+
+/* ═══════════════════════════════════════════════════
+   TAB 4 — NOTES MANAGER
+═══════════════════════════════════════════════════ */
+let notes = load('dsa-notes') || [];
+let activeNoteId = null;
+
+function newNote() {
+  activeNoteId = null;
+  $('note-title').value = '';
+  $('note-content').value = '';
+  $('note-ts').textContent = '';
+  document.querySelectorAll('.note-list-item').forEach(n => n.classList.remove('active'));
+  $('note-title').focus();
+}
+
+function saveNote() {
+  const title   = $('note-title').value.trim();
+  const content = $('note-content').value.trim();
+  if (!title) { toast('Enter a note title.', 'var(--rose)'); return; }
+
+  if (activeNoteId) {
+    const note = notes.find(n => n.id === activeNoteId);
+    if (note) { note.title = title; note.content = content; note.updated = Date.now(); }
+  } else {
+    const note = { id: Date.now(), title, content, created: Date.now(), updated: Date.now() };
+    notes.unshift(note);
+    activeNoteId = note.id;
+  }
+  save('dsa-notes', notes);
+  renderNotesList();
+  updateNoteTs();
+  toast('Note saved!');
+}
+
+function deleteNote() {
+  if (!activeNoteId) { toast('Select a note to delete.', 'var(--rose)'); return; }
+  if (!confirm('Delete this note?')) return;
+  notes = notes.filter(n => n.id !== activeNoteId);
+  save('dsa-notes', notes);
+  activeNoteId = null;
+  $('note-title').value = '';
+  $('note-content').value = '';
+  $('note-ts').textContent = '';
+  renderNotesList();
+  toast('Note deleted.', 'var(--rose)');
+}
+
+function openNote(id) {
+  const note = notes.find(n => n.id === id);
+  if (!note) return;
+  activeNoteId = id;
+  $('note-title').value   = note.title;
+  $('note-content').value = note.content;
+  updateNoteTs(note);
+  renderNotesList();
+}
+
+function updateNoteTs(note) {
+  note = note || notes.find(n => n.id === activeNoteId);
+  $('note-ts').textContent = note ? 'Saved ' + fmtDate(note.updated) : '';
+}
+
+function renderNotesList() {
+  const list  = $('notes-list');
+  const empty = $('notes-sidebar-empty');
+  list.innerHTML = '';
+
+  if (!notes.length) { empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+
+  notes.forEach(n => {
+    const el = document.createElement('div');
+    el.className = 'note-list-item' + (n.id === activeNoteId ? ' active' : '');
+    el.onclick = () => openNote(n.id);
+    el.innerHTML = `
+      <div class="nli-title">${escHtml(n.title)}</div>
+      <div class="nli-date">${fmtDate(n.updated)}</div>
+    `;
+    list.appendChild(el);
+  });
+}
+
+renderNotesList();
+
+/* ═══════════════════════════════════════════════════
+   TAB 5 — MOTIVATIONAL QUOTES
+═══════════════════════════════════════════════════ */
+const QUOTES = [
+  ["The secret of getting ahead is getting started.", "Mark Twain"],
+  ["It always seems impossible until it's done.", "Nelson Mandela"],
+  ["Education is the most powerful weapon you can use to change the world.", "Nelson Mandela"],
+  ["Study hard what interests you the most in the most undisciplined, irreverent and original manner possible.", "Richard Feynman"],
+  ["The more that you read, the more things you will know.", "Dr. Seuss"],
+  ["An investment in knowledge pays the best interest.", "Benjamin Franklin"],
+  ["Success is the sum of small efforts repeated day in and day out.", "Robert Collier"],
+  ["Don't let what you cannot do interfere with what you can do.", "John Wooden"],
+  ["Genius is 1% talent and 99% hard work.", "Albert Einstein"],
+  ["The expert in anything was once a beginner.", "Helen Hayes"],
+  ["Learning is not attained by chance; it must be sought with ardor.", "Abigail Adams"],
+  ["Push yourself, because no one else is going to do it for you.", "Unknown"],
+  ["Great things never come from comfort zones.", "Unknown"],
+  ["You don't have to be great to start, but you have to start to be great.", "Zig Ziglar"],
+  ["Believe you can and you're halfway there.", "Theodore Roosevelt"],
+  ["The beautiful thing about learning is that no one can take it away from you.", "B.B. King"],
+  ["Develop a passion for learning. If you do, you will never cease to grow.", "Anthony J. D'Angelo"],
+];
+
+let quoteIdx = Math.floor(Math.random() * QUOTES.length);
+
+function showQuote(idx, animate=true) {
+  quoteIdx = ((idx % QUOTES.length) + QUOTES.length) % QUOTES.length;
+  const [q, a] = QUOTES[quoteIdx];
+  const qEl = $('quote-text');
+  const aEl = $('quote-author');
+  if (animate) {
+    qEl.classList.remove('quote-animate');
+    void qEl.offsetWidth;
+    qEl.classList.add('quote-animate');
+  }
+  qEl.textContent = q;
+  aEl.textContent = '— ' + a;
+  $('quote-counter').textContent = `Quote ${quoteIdx + 1} of ${QUOTES.length}`;
+}
+
+function nextQuote()   { showQuote(quoteIdx + 1); }
+function prevQuote()   { showQuote(quoteIdx - 1); }
+function randomQuote() { showQuote(Math.floor(Math.random() * QUOTES.length)); }
+
+function renderQuotesGrid() {
+  const grid = $('quotes-grid');
+  QUOTES.forEach(([q, a]) => {
+    const el = document.createElement('div');
+    el.className = 'quote-card-sm';
+    el.innerHTML = `<div class="qcs-text">"${escHtml(q)}"</div><div class="qcs-author">— ${escHtml(a)}</div>`;
+    grid.appendChild(el);
+  });
+}
+
+showQuote(quoteIdx, false);
+renderQuotesGrid();
+</script>
+</body>
+</html>
